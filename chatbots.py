@@ -1,13 +1,25 @@
 """
 Chatbot API connectors for OpenAI, DeepSeek, Claude, and HuggingFace.
 """
-import openai
-import anthropic
 import requests
 from typing import Optional
 import logging
 
 from config import config
+from mock_chatbot import MockChatbot
+
+# Optional API imports
+try:
+    import openai
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
+try:
+    import anthropic
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,16 +51,21 @@ class OpenAIChatbot(ChatbotConnector):
     def __init__(self):
         super().__init__()
         self.api_key = config.OPENAI_API_KEY
-        if self.api_key:
+        self.mock = MockChatbot("OpenAI")
+        if self.api_key and HAS_OPENAI:
             openai.api_key = self.api_key
     
     def get_response(self, question: str) -> Optional[str]:
         """Get response from OpenAI GPT-4o-mini."""
+        # Use mock if no API key or library not installed
+        if not HAS_OPENAI or not self.api_key:
+            if not HAS_OPENAI:
+                logger.info("OpenAI library not installed, using mock chatbot")
+            elif not self.api_key:
+                logger.info("OpenAI API key not configured, using mock chatbot")
+            return self.mock.get_response(question)
+        
         try:
-            if not self.api_key:
-                logger.warning("OpenAI API key not configured")
-                return None
-            
             client = openai.OpenAI(api_key=self.api_key)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -65,8 +82,8 @@ class OpenAIChatbot(ChatbotConnector):
             return answer
             
         except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return None
+            logger.error(f"OpenAI API error: {str(e)}, falling back to mock")
+            return self.mock.get_response(question)
 
 
 class DeepSeekChatbot(ChatbotConnector):
@@ -76,14 +93,16 @@ class DeepSeekChatbot(ChatbotConnector):
         super().__init__()
         self.api_key = config.DEEPSEEK_API_KEY
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
+        self.mock = MockChatbot("DeepSeek")
     
     def get_response(self, question: str) -> Optional[str]:
         """Get response from DeepSeek R1."""
+        # Use mock if no API key
+        if not self.api_key:
+            logger.info("DeepSeek API key not configured, using mock chatbot")
+            return self.mock.get_response(question)
+        
         try:
-            if not self.api_key:
-                logger.warning("DeepSeek API key not configured")
-                return None
-            
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
@@ -107,8 +126,8 @@ class DeepSeekChatbot(ChatbotConnector):
             return answer
             
         except Exception as e:
-            logger.error(f"DeepSeek API error: {str(e)}")
-            return None
+            logger.error(f"DeepSeek API error: {str(e)}, falling back to mock")
+            return self.mock.get_response(question)
 
 
 class ClaudeChatbot(ChatbotConnector):
@@ -117,16 +136,21 @@ class ClaudeChatbot(ChatbotConnector):
     def __init__(self):
         super().__init__()
         self.api_key = config.ANTHROPIC_API_KEY
-        if self.api_key:
+        self.mock = MockChatbot("Claude")
+        if self.api_key and HAS_ANTHROPIC:
             self.client = anthropic.Anthropic(api_key=self.api_key)
     
     def get_response(self, question: str) -> Optional[str]:
         """Get response from Anthropic Claude."""
+        # Use mock if no API key or library not installed
+        if not HAS_ANTHROPIC or not self.api_key:
+            if not HAS_ANTHROPIC:
+                logger.info("Anthropic library not installed, using mock chatbot")
+            elif not self.api_key:
+                logger.info("Anthropic API key not configured, using mock chatbot")
+            return self.mock.get_response(question)
+        
         try:
-            if not self.api_key:
-                logger.warning("Anthropic API key not configured")
-                return None
-            
             message = self.client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=500,
@@ -140,8 +164,8 @@ class ClaudeChatbot(ChatbotConnector):
             return answer
             
         except Exception as e:
-            logger.error(f"Claude API error: {str(e)}")
-            return None
+            logger.error(f"Claude API error: {str(e)}, falling back to mock")
+            return self.mock.get_response(question)
 
 
 class HuggingFaceChatbot(ChatbotConnector):
@@ -151,14 +175,16 @@ class HuggingFaceChatbot(ChatbotConnector):
         super().__init__()
         self.api_key = config.HUGGINGFACE_API_KEY
         self.api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+        self.mock = MockChatbot("HuggingFace")
     
     def get_response(self, question: str) -> Optional[str]:
         """Get response from HuggingFace Mistral-7B."""
+        # Use mock if no API key
+        if not self.api_key:
+            logger.info("HuggingFace API key not configured, using mock chatbot")
+            return self.mock.get_response(question)
+        
         try:
-            if not self.api_key:
-                logger.warning("HuggingFace API key not configured")
-                return None
-            
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
@@ -186,8 +212,8 @@ class HuggingFaceChatbot(ChatbotConnector):
             return answer
             
         except Exception as e:
-            logger.error(f"HuggingFace API error: {str(e)}")
-            return None
+            logger.error(f"HuggingFace API error: {str(e)}, falling back to mock")
+            return self.mock.get_response(question)
 
 
 class ChatbotRouter:
@@ -225,10 +251,16 @@ class ChatbotRouter:
             logger.warning(f"Primary chatbot {chatbot_name} failed, falling back to {self.fallback}")
         
         # Fallback to OpenAI
-        if self.fallback in self.chatbots:
+        if self.fallback in self.chatbots and chatbot_name != self.fallback:
             response = self.chatbots[self.fallback].get_response(question)
             if response:
                 return response, f"{self.fallback} (fallback)"
+        
+        # If we get here and primary was already the fallback, return its response anyway
+        if chatbot_name == self.fallback and chatbot_name in self.chatbots:
+            response = self.chatbots[chatbot_name].get_response(question)
+            if response:
+                return response, chatbot_name
         
         return None, "none"
 

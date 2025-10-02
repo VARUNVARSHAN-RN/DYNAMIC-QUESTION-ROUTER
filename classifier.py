@@ -1,12 +1,18 @@
 """
 Question Classifier using DeBERTaV3 model for domain and difficulty classification.
 """
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import Tuple, Dict
 import logging
 
 from config import config
+
+# Optional imports for future deep learning classification
+try:
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    HAS_TRANSFORMERS = True
+except ImportError:
+    HAS_TRANSFORMERS = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,15 +24,18 @@ class QuestionClassifier:
     def __init__(self):
         """Initialize the classifier with DeBERTaV3 model."""
         self.model_name = config.CLASSIFICATION_MODEL
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info(f"Using device: {self.device}")
         
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        if HAS_TRANSFORMERS:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            logger.info(f"Using device: {self.device}")
+            # Future: Load tokenizer and model for deep learning classification
+            # self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        else:
+            logger.info("Using keyword-based classification (transformers not installed)")
         
-        # For this implementation, we'll use a rule-based approach with keyword matching
+        # For this implementation, we use a rule-based approach with keyword matching
         # In production, you would fine-tune DeBERTaV3 on labeled data
-        # Here we simulate classification based on keywords and patterns
+        # Here we classify based on keywords and patterns
         
         self.domain_keywords = {
             "Math": ["calculate", "solve", "equation", "math", "algebra", "geometry", "calculus", 
