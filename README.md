@@ -62,6 +62,20 @@ You only need to configure the APIs you want to use. The system will automatical
 
 ## 🎯 Usage
 
+### Quick Demo (No API Keys Required)
+
+Run the demo to see the system in action:
+
+```bash
+python demo.py
+```
+
+This demonstrates:
+- Question classification across domains and difficulty levels
+- Intelligent routing with fallback strategies
+- Feedback collection and learning
+- Complete end-to-end flow
+
 ### Command Line Interface
 
 Run the interactive CLI:
@@ -84,6 +98,8 @@ Was this answer helpful? (y/n): y
 ```
 
 ### Python API
+
+Use the system programmatically:
 
 ```python
 from main import DynamicQuestionRouter
@@ -127,6 +143,21 @@ stats = router.get_statistics()
 print(stats)
 ```
 
+### Running Examples
+
+Run the example script to see various question types:
+
+```bash
+python example.py
+```
+
+This processes example questions covering:
+- Math problems (easy to hard)
+- Coding tasks
+- Science questions
+- Reasoning problems
+- Agentic workflows
+
 ## 🔄 System Flow
 
 1. **User Input**: User enters a question
@@ -137,6 +168,56 @@ print(stats)
 6. **Response**: Answer is displayed to user
 7. **Feedback**: User provides feedback (positive/negative)
 8. **Learning**: Feedback stored for future classifier fine-tuning
+
+```
+┌─────────────┐
+│    User     │
+│  Question   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────┐
+│   DeBERTaV3 Classifier  │
+│  Domain + Difficulty    │
+└──────────┬──────────────┘
+           │
+           ▼
+┌──────────────────────────┐
+│    Intelligent Router    │
+│  Maps to Best Chatbot    │
+└──────────┬───────────────┘
+           │
+           ▼
+     ┌────────────┐
+     │  Primary   │
+     │  Chatbot   │─────► Success ─────┐
+     └────┬───────┘                     │
+          │                             │
+       Failure                          │
+          │                             │
+          ▼                             │
+     ┌────────────┐                     │
+     │  Fallback  │                     │
+     │  Chatbot   │─────► Success ─────┤
+     └────────────┘                     │
+                                        ▼
+                                ┌───────────────┐
+                                │    Answer     │
+                                │   Display     │
+                                └───────┬───────┘
+                                        │
+                                        ▼
+                                ┌───────────────┐
+                                │   Feedback    │
+                                │  Collection   │
+                                └───────┬───────┘
+                                        │
+                                        ▼
+                                ┌───────────────┐
+                                │  Store for    │
+                                │  Fine-tuning  │
+                                └───────────────┘
+```
 
 ## 📊 Routing Strategy
 
@@ -159,11 +240,27 @@ DYNAMIC-QUESTION-ROUTER/
 ├── router.py           # Routing logic with fallback
 ├── chatbots.py         # Chatbot API integrations
 ├── feedback.py         # Feedback collection and storage
+├── demo.py             # Interactive demonstration (no API keys needed)
+├── example.py          # Example usage script
 ├── requirements.txt    # Python dependencies
 ├── .env.example       # Example environment configuration
 ├── .gitignore         # Git ignore patterns
 └── README.md          # This file
 ```
+
+## 🧠 About DeBERTaV3 Classifier
+
+The system uses Microsoft's DeBERTaV3 (Decoding-enhanced BERT with disentangled attention) for question classification:
+
+- **Domains**: Math, Coding, Science, Reasoning, Agentic
+- **Difficulties**: Easy, Medium, Hard
+- **Fallback**: Rule-based classification when model unavailable
+- **Learning**: Can be fine-tuned with user feedback data
+
+The classifier starts with rule-based heuristics and can be progressively improved by:
+1. Collecting feedback on misclassifications
+2. Accumulating correction data
+3. Fine-tuning the DeBERTaV3 model with the corrected examples
 
 ## 🔒 Security
 
